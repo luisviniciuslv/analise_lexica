@@ -5,19 +5,21 @@ pub enum Token {
   Minus,
   Star,
   Slash,
+  Name(String)
 }
 
 #[derive(Debug)]
 pub enum LexState {
   Default,
   Number,
-  Error(char),
+  Name,
   Stop,
 }
 
 fn tokens(s: &str) -> Vec<Token> {
   let mut lex_state = LexState::Default;
   let mut number = String::new();
+  let mut name = String::new();
   let mut tokens = Vec::new();
   let mut cursor = 0;
 
@@ -34,23 +36,30 @@ fn tokens(s: &str) -> Vec<Token> {
             number.push(c);
             lex_state = LexState::Number;
           }
-          Some(c) => lex_state = LexState::Error(c),
+          Some(c) => {
+            name.push(c);
+            lex_state = LexState::Name;
+          },
           None => lex_state = LexState::Stop,
         }
         cursor += 1;
       }
+
       LexState::Number => match s.chars().nth(cursor) {
+
         Some(c) if c.is_ascii_digit() => {
           number.push(c);
           cursor += 1;
           continue 'lex;
         }
+
         Some(_other) => {
           tokens.push(Token::Number(number.parse().unwrap()));
           number = String::new();
           lex_state = LexState::Default;
           continue 'lex;
-        }
+        } 
+
         None => {
           tokens.push(Token::Number(number.parse().unwrap()));
           number = String::new();
@@ -58,7 +67,29 @@ fn tokens(s: &str) -> Vec<Token> {
           continue 'lex;
         }
       },
-      LexState::Error(c) => panic!("Unexpected character '{c}'"),
+
+      LexState::Name => match s.chars().nth(cursor) {
+
+        Some(c) if c.is_ascii_alphabetic() || c.is_ascii_punctuation() => { // Adicionado is_ascii_punctuation para aceitar caracteres especiais pq sim :D
+          name.push(c);
+          cursor += 1;
+          continue 'lex;
+        }
+
+        Some(_other) => {
+          tokens.push(Token::Name(name.clone()));
+          name = String::new();
+          lex_state = LexState::Default;
+          continue 'lex;
+        }
+
+        None => {
+          tokens.push(Token::Name(name.clone()));
+          lex_state = LexState::Stop;
+          continue 'lex;
+        }
+      },
+
       LexState::Stop => break,
     }
   }
@@ -66,6 +97,33 @@ fn tokens(s: &str) -> Vec<Token> {
   tokens
 }
 
+fn interpreter(tokens: Vec<Token>) -> u32 { // tentativa falha de implementar a função interpreter
+  let mut result = 0;
+  let mut operator = Token::Plus;
+
+  for token in tokens {
+    match token {
+      Token::Number(n) => match operator {
+        Token::Plus => result += n,
+        Token::Minus => result -= n,
+        Token::Star => result *= n,
+        Token::Slash => result /= n,
+        _ => println!("Invalid operator")
+      },
+      Token::Plus => operator = Token::Plus,
+      Token::Minus => operator = Token::Minus,
+      Token::Star => operator = Token::Star,
+      Token::Slash => operator = Token::Slash,
+      Token::Name(n) => println!("{}", n)
+    }
+  }
+
+  result
+}
 fn main() {
-  println!("{:?}", tokens("42 3 + 5 - 2 * 4  /"));
+  let s = "1 * 9 ola 123 lol removi o panic -1";
+  let t = tokens(s);
+  println!("{:?}", t);
+  let result = interpreter(t);
+  println!("{}", result);
 }
