@@ -14,6 +14,7 @@ pub enum LexState {
   Number,
   Name,
   Stop,
+  Error(char),
 }
 
 fn tokens(s: &str) -> Vec<Token> {
@@ -70,16 +71,16 @@ fn tokens(s: &str) -> Vec<Token> {
 
       LexState::Name => match s.chars().nth(cursor) {
 
-        Some(c) if c.is_ascii_alphabetic() || c.is_ascii_punctuation() => { // Adicionado is_ascii_punctuation para aceitar caracteres especiais pq sim :D
+        Some(c) if c.is_ascii_alphabetic() => { // Adicionado is_ascii_punctuation para aceitar caracteres especiais pq sim :D
           name.push(c);
           cursor += 1;
           continue 'lex;
         }
 
-        Some(_other) => {
+        Some(c) => {
           tokens.push(Token::Name(name.clone()));
           name = String::new();
-          lex_state = LexState::Default;
+          lex_state = LexState::Error(c);
           continue 'lex;
         }
 
@@ -91,39 +92,53 @@ fn tokens(s: &str) -> Vec<Token> {
       },
 
       LexState::Stop => break,
+
+      LexState::Error(_c) => {
+        println!("parada diferente");
+        lex_state = LexState::Default;
+        continue 'lex;
+      }
     }
   }
 
   tokens
 }
+fn main() {
+  let s = "2 ?3 4 + +";
+  let t = tokens(s);
 
-fn interpreter(tokens: Vec<Token>) -> u32 { // tentativa falha de implementar a função interpreter
-  let mut result = 0;
-  let mut operator = Token::Plus;
+  let some = some_stack(t);
+
+  println!("{:?}", some);
+}
+
+fn some_stack(tokens: Vec<Token>) -> i32 {
+  let mut stack: Vec<i32> = Vec::new();
 
   for token in tokens {
     match token {
-      Token::Number(n) => match operator {
-        Token::Plus => result += n,
-        Token::Minus => result -= n,
-        Token::Star => result *= n,
-        Token::Slash => result /= n,
-        _ => println!("Invalid operator")
+        Token::Number(n) => stack.push(n as i32),
+        
+        Token::Minus | Token::Plus | Token::Slash | Token::Star => {
+          if stack.len() >= 2 {
+            let right = stack.pop().unwrap(); // unwrap é (tenho certeza que existe um número aquim, mas se eu estiver errado para ap orra toda)
+            let left = stack.pop().unwrap();
+
+            let result = match token {
+              Token::Plus => left + right,
+              Token::Minus => left - right,
+              Token::Star => left * right,
+              Token::Slash => left / right,
+              _ => unreachable!(), // Verifiquei tudo
+            };
+
+            stack.push(result);
+
+          }
       },
-      Token::Plus => operator = Token::Plus,
-      Token::Minus => operator = Token::Minus,
-      Token::Star => operator = Token::Star,
-      Token::Slash => operator = Token::Slash,
-      Token::Name(n) => println!("{}", n)
+        _ => { } // outros tokens
     }
   }
 
-  result
-}
-fn main() {
-  let s = "1 * 9 ola 123 lol removi o panic -1";
-  let t = tokens(s);
-  println!("{:?}", t);
-  let result = interpreter(t);
-  println!("{}", result);
+  stack.pop().unwrap_or(0)
 }
