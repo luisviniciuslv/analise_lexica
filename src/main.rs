@@ -136,7 +136,7 @@ fn some_stack(tokens: Vec<Token>) {
         }
       }
 
-      Token::Name (name) => {
+      Token::Name(name) => {
         let func = environment(name.to_string().as_str());
 
         match func {
@@ -158,17 +158,15 @@ fn some_stack(tokens: Vec<Token>) {
       _ => {} // outros tokens
     }
   }
-  
 }
 
 fn environment(token: &str) -> DefaultFunctions {
-  if  token == "print" {
+  if token == "print" {
     DefaultFunctions::Print
   } else if token == "sum" {
     DefaultFunctions::Sum
   } else {
-    // Add an else block that evaluates to the expected type
-    DefaultFunctions::Unknown // Or any other appropriate value
+    DefaultFunctions::Unknown 
   }
 }
 
